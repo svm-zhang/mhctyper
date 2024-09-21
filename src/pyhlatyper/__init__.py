@@ -1,2 +1,5 @@
-def hello() -> str:
-    return "Hello from pyhlatyper!"
+from __future__ import annotations
+
+from pyhlatyper.pyhlatyper import run_pyhlatyper
+
+__all__ = ["run_pyhlatyper"]
