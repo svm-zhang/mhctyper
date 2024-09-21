@@ -5,9 +5,17 @@ description = "Add your description here"
 authors = [
     { name = "simo", email = "svm.zhang@gmail.com" }
 ]
-dependencies = []
+dependencies = [
+    "numpy>=2.1.1",
+    "polars>=1.7.0",
+    "pysam>=0.22.1",
+    "tqdm>=4.66.5",
+]
 readme = "README.md"
 requires-python = ">= 3.8"
+
+[project.scripts]
+pyhlatyper = "pyhlatyper:run_pyhlatyper"
 
 [build-system]
 requires = ["hatchling"]
@@ -15,7 +23,9 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = []
+dev-dependencies = [
+    "types-tqdm>=4.66.0.20240417",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
