@@ -7,5 +7,15 @@
 #   all-features: false
 #   with-sources: false
 #   generate-hashes: false
+#   universal: false
 
 -e file:.
+numpy==2.1.1
+    # via pyhlatyper
+polars==1.7.0
+    # via pyhlatyper
+pysam==0.22.1
+    # via pyhlatyper
+tqdm==4.66.5
+    # via pyhlatyper
+types-tqdm==4.66.0.20240417
