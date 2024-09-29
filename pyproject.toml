@@ -10,6 +10,7 @@ dependencies = [
     "polars>=1.7.0",
     "pysam>=0.22.1",
     "tqdm>=4.66.5",
+    "libscibio @ https://test-files.pythonhosted.org/packages/46/fc/383c2af4111635b7992076cb380dbfb5337c401fc6b29e241cc40e3be469/libscibio-0.1.1.tar.gz",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
@@ -25,6 +26,8 @@ build-backend = "hatchling.build"
 managed = true
 dev-dependencies = [
     "types-tqdm>=4.66.0.20240417",
+    "pytest>=8.3.3",
+    "pytest-cov>=5.0.0",
 ]
 
 [tool.hatch.metadata]

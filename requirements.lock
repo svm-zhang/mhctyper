@@ -10,11 +10,23 @@
 #   universal: false
 
 -e file:.
+certifi==2024.8.30
+    # via requests
+charset-normalizer==3.3.2
+    # via requests
+idna==3.10
+    # via requests
+libscibio @ https://test-files.pythonhosted.org/packages/46/fc/383c2af4111635b7992076cb380dbfb5337c401fc6b29e241cc40e3be469/libscibio-0.1.1.tar.gz
+    # via pyhlatyper
 numpy==2.1.1
     # via pyhlatyper
 polars==1.7.0
     # via pyhlatyper
 pysam==0.22.1
     # via pyhlatyper
+requests==2.32.3
+    # via libscibio
 tqdm==4.66.5
     # via pyhlatyper
+urllib3==2.2.3
+    # via requests

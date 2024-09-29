@@ -10,12 +10,40 @@
 #   universal: false
 
 -e file:.
+certifi==2024.8.30
+    # via requests
+charset-normalizer==3.3.2
+    # via requests
+coverage==7.6.1
+    # via pytest-cov
+exceptiongroup==1.2.2
+    # via pytest
+idna==3.10
+    # via requests
+iniconfig==2.0.0
+    # via pytest
+libscibio @ https://test-files.pythonhosted.org/packages/46/fc/383c2af4111635b7992076cb380dbfb5337c401fc6b29e241cc40e3be469/libscibio-0.1.1.tar.gz
+    # via pyhlatyper
 numpy==2.1.1
     # via pyhlatyper
+packaging==24.1
+    # via pytest
+pluggy==1.5.0
+    # via pytest
 polars==1.7.0
     # via pyhlatyper
 pysam==0.22.1
     # via pyhlatyper
+pytest==8.3.3
+    # via pytest-cov
+pytest-cov==5.0.0
+requests==2.32.3
+    # via libscibio
+tomli==2.0.1
+    # via coverage
+    # via pytest
 tqdm==4.66.5
     # via pyhlatyper
 types-tqdm==4.66.0.20240417
+urllib3==2.2.3
+    # via requests

@@ -8,3 +8,13 @@ wheels/
 
 # venv
 .venv
+
+# pytest
+.coverage
+.pytest_cache/
+
+# lint
+.ruff_cache/
+
+# mypy
+.mypy_cache/
