@@ -1,8 +1,8 @@
 import itertools
 import re
-from collections.abc import MutableSequence
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Generator
+from typing import Any, Union
 
 import pysam
 from libscibio import parse_path
@@ -68,41 +68,34 @@ class BAMetadata:
         return [k for r in self.references for k in r.keys()]
 
 
-@dataclass(slots=True)
-class AlignmentRecord:
-    rname: str
-    mapq: int
-    start: int
-    end: int
-    is_proper: bool
-    is_mapped: bool
-    is_secondary: bool
-    is_duplicate: bool
-    n_sc: int
-    n_indels: int
-    n_ecnt: int
-    qname: str
-    seq: str
-    qual: MutableSequence[int]
+def parse_cigar(
+    cigar: str,
+) -> list[tuple[int, str]]:
+    if not cigar:
+        raise ValueError("Cannot parse empty CIGAR string")
+
+    cigar_iter = itertools.groupby(cigar, lambda k: k.isdigit())
+    cigar_parsed = [
+        (int("".join(n)), "".join(next(cigar_iter)[1])) for _, n in cigar_iter
+    ]
+    if not cigar_parsed:
+        raise ValueError(
+            f"CIGAR string {cigar} failed to be parsed. Empty list returned"
+        )
+    return cigar_parsed
 
 
-# TODO: perhaps return a dictionary is better
-# def parse_cigar(cigar: str) -> list[tuple[int, str]]:
-#     cigar_iter = itertools.groupby(cigar, lambda k: k.isdigit())
-#     cigar_list = []
-#     for _, n in cigar_iter:
-#         op = int("".join(n)), "".join(next(cigar_iter)[1])
-#         cigar_list.append(op)
-#
-#     return cigar_list
+def parse_md(md: str) -> list[str]:
+    if not md:
+        raise ValueError("Cannot parse empty MD string")
 
-
-# def parse_md(md_str: str) -> list[str]:
-# TODO: check if given md string is empty
-#     md_iter = itertools.groupby(
-#         md_str, lambda k: k.isalpha() or not k.isalnum()
-#     )
-#     return ["".join(group) for c, group in md_iter if not c or group]
+    md_iter = itertools.groupby(md, lambda k: k.isalpha() or not k.isalnum())
+    md_parsed = ["".join(group) for c, group in md_iter if not c or group]
+    if not md_parsed:
+        raise ValueError(
+            f"MD string {md} failed to be parsed. Empty list returned"
+        )
+    return md_parsed
 
 
 def count_soft_clip_bases(cigar: str) -> int:
@@ -121,6 +114,20 @@ def count_soft_clip_bases(cigar: str) -> int:
     return n_sc
 
 
+def count_unaligned_events(
+    cigar: Union[str, Sequence[tuple[int, str]]],
+) -> int:
+    if isinstance(cigar, str):
+        cigar = parse_cigar(cigar)
+    elif isinstance(cigar, list):
+        pass
+    else:
+        raise TypeError(
+            "cigar parameter must be either str or list[tuple[int, str]] type"
+        )
+    return len([op for _, op in cigar if op in ["I", "D", "S"]])
+
+
 def count_indel_events(cigar: str) -> int:
     """Count the number of Is and Ds event in the given cigar string"""
     cigar_iter = itertools.groupby(cigar, lambda k: k.isalpha())
@@ -128,54 +135,15 @@ def count_indel_events(cigar: str) -> int:
     return len([e for e in aln_events if e in ["I", "D"]])
 
 
-def count_mismatch_events(md: str) -> int:
-    md_iter = itertools.groupby(md, lambda k: k.isalpha() or not k.isalnum())
-    aln_events = ["".join(grpv) for grpk, grpv in md_iter if grpk]
-    return len([e for e in aln_events if e.isalpha()])
-
-
-def parse_alignments(
-    bam_fspath: str,
-    rname: str,
-) -> Generator[AlignmentRecord, None, None]:
-    with pysam.AlignmentFile(bam_fspath, "rb") as bamf:
-        for aln in bamf.fetch(contig=rname):
-            # Skip alignment record with qc_fail and supplementary marked
-            if aln.is_qcfail or aln.is_supplementary:
-                continue
-
-            n_sc = 0
-            n_ecnt = 0
-            n_indels = -1
-            if aln.cigarstring is not None:
-                # TODO: cigar string parsed twice, wasted
-                n_indels = count_indel_events(cigar=aln.cigarstring)
-                n_ecnt += n_indels
-                n_sc = count_soft_clip_bases(cigar=aln.cigarstring)
-            n_mms = -1
-            if aln.has_tag("MD"):
-                n_mms = count_mismatch_events(md=str(aln.get_tag("MD")))
-                n_ecnt += n_mms
-
-            yield AlignmentRecord(
-                rname=aln.reference_name
-                if aln.reference_name is not None
-                else "",
-                mapq=aln.mapping_quality,
-                start=aln.reference_start,
-                end=aln.reference_end if aln.reference_end is not None else -1,
-                is_proper=aln.is_proper_pair,
-                is_mapped=not aln.is_unmapped,
-                is_secondary=aln.is_secondary,
-                is_duplicate=aln.is_duplicate,
-                n_sc=n_sc,
-                n_indels=n_indels,
-                n_ecnt=n_ecnt,
-                qname=aln.query_name if aln.query_name is not None else "",
-                seq=aln.query_sequence
-                if aln.query_sequence is not None
-                else "",
-                qual=aln.query_qualities
-                if aln.query_qualities is not None
-                else [],
-            )
+def count_mismatch_events(md: Union[str, Sequence[str]]) -> int:
+    if isinstance(md, str):
+        md = parse_md(md)
+    elif isinstance(md, list):
+        pass
+    else:
+        raise TypeError(
+            "md parameter must be either str or list[tuple[int, str]] type"
+        )
+    # md_iter = itertools.groupby(md, lambda k: k.isalpha() or not k.isalnum())
+    # aln_events = ["".join(grpv) for grpk, grpv in md_iter if grpk]
+    return len([e for e in md if e.isalpha()])
