@@ -7,9 +7,8 @@ from pprint import pprint
 from typing import TYPE_CHECKING
 
 import polars as pl
-from libscibio import get_parent_dir, make_dir
+from tinyscibio import BAMetadata, get_parent_dir, make_dir
 
-from .bam import BAMetadata
 from .cli import parse_cmd
 from .hla_allele import HLAllelePattern, reduce_resolution
 from .score_alleles import score_a_one, score_a_two, score_per_allele
@@ -18,7 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Optional
 
-    from libscibio import _PathLike
+    from tinyscibio import _PathLike
 
 
 def get_winners(allele_scores: pl.DataFrame) -> pl.DataFrame:
@@ -38,24 +37,6 @@ def get_winners(allele_scores: pl.DataFrame) -> pl.DataFrame:
     return winners
 
 
-# def score_second_by_gene(
-#     gene: str, a1_scores: pl.DataFrame, a1_winners: pl.DataFrame
-# ) -> pl.DataFrame:
-#     a1_winners = a1_winners.filter(pl.col("gene") == gene)
-#     a1_scores = a1_scores.filter(pl.col("gene") == gene)
-#     score_table = a1_scores.join(a1_winners, on=["ids", "gene"], how="left")
-#     score_table = score_table.with_columns(
-#         pl.col("scores_right").fill_null(0.0)
-#     )
-#     score_table = score_table.with_columns(
-#         factor=pl.col("scores") / (pl.col("scores") + pl.col("scores_right"))
-#     )
-#     score_table = score_table.with_columns(
-#         scores=pl.col("scores") * pl.col("factor")
-#     )
-#     return score_table
-
-
 def load_allele_pop_freq(freq_fspath: _PathLike) -> pl.DataFrame:
     """Load allele population frequency data"""
     freq_df = pl.read_csv(freq_fspath, separator="\t")
@@ -66,12 +47,12 @@ def load_allele_pop_freq(freq_fspath: _PathLike) -> pl.DataFrame:
 
 
 def collect_alleles_to_type(
-    bam: _PathLike, kept: Optional[Sequence[str]] = None
+    bam_metadata: BAMetadata,
+    kept: Optional[Sequence[str]] = None,
+    # bam: _PathLike, kept: Optional[Sequence[str]] = None
 ) -> list[str]:
     """Collect HLA alleles to type"""
-    bam_metadata = BAMetadata(fspath=str(bam))
     ap = HLAllelePattern(resolution=2)
-    # alleles = bam_metadata.seqnames()
     alleles_df = pl.DataFrame({"Allele": bam_metadata.seqnames()})
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -103,15 +84,29 @@ def run_pyhlatyper() -> int:
 
     allele_pop_freq = load_allele_pop_freq(freq_fspath=args.freq)
 
+    bam_metadata = BAMetadata(args.bam)
+    # collect all alleles to type from BAM header
     alleles_to_type = collect_alleles_to_type(
-        args.bam, kept=allele_pop_freq["Allele"].to_list()
+        bam_metadata, kept=allele_pop_freq["Allele"].to_list()
     )
 
-    score_per_allele(allele="hla_01_01_01_01", bam_fspath=args.bam, min_ecnt=1)
-    raise SystemExit
+    # score_df = score_per_allele_v2(
+    #     allele="hla_c_01_02_01", bam_fspath=args.bam, min_ecnt=1
+    # )
+    # with pl.Config(fmt_str_lengths=1000, set_tbl_cols=-1):
+    #     print(score_df.head())
+    # raise SystemExit
 
-    # FIXME: get sid from read group SM
-    out_a1 = outdir / "test.a1.tsv"
+    rg = bam_metadata.read_groups
+    if len(rg) > 1:
+        raise ValueError(f"Found more than 1 read groups: {rg}")
+    rg_sm = next(iter(rg)).get("SM", None)
+    if rg_sm is None:
+        raise ValueError(
+            "Failed to get SM from read group. "
+            f"Please check parsed read group: {rg}"
+        )
+    out_a1 = outdir / f"{rg_sm}.a1.tsv"
     a1_scores = pl.DataFrame()
     if not out_a1.exists():
         a1_scores = score_a_one(
@@ -123,14 +118,17 @@ def run_pyhlatyper() -> int:
         a1_scores.write_csv(out_a1, separator="\t")
     else:
         a1_scores = pl.read_csv(out_a1, separator="\t")
-    pprint(a1_scores)
-    raise SystemExit
 
     a1_winners = get_winners(allele_scores=a1_scores)
     winner_scores = a1_scores.join(
         a1_winners, on=["gene", "allele"], how="inner"
     )
-    # out_a2 = f"{outdir}/{sid}.a2.tsv"
+    with pl.Config(fmt_str_lengths=1000, set_tbl_cols=-1):
+        print(a1_scores.head())
+        print(a1_winners)
+    raise SystemExit
+
+    out_a2 = outdir / f"{rg_sm}.a2.tsv"
     a2_scores = score_a_two(
         a1_scores=a1_scores,
         a1_winners=winner_scores,
@@ -139,10 +137,11 @@ def run_pyhlatyper() -> int:
     )
     a2_winners = get_winners(allele_scores=a2_scores)
 
-    # FIXME: sid can be obtained from bam_metadata.readgroup
-    hla_res = f"{outdir}/{sid}.hlatyping.res.tsv"
+    hla_res = f"{outdir}/{rg_sm}.hlatyping.res.tsv"
     hla_res_df = pl.concat([a1_winners, a2_winners])
-    hla_res_df = hla_res_df.with_columns(sample=pl.lit(sid)).sort(by="allele")
+    hla_res_df = hla_res_df.with_columns(sample=pl.lit(rg_sm)).sort(
+        by="allele"
+    )
     print(hla_res_df)
     hla_res_df.write_csv(hla_res, separator="\t")
     return 0
