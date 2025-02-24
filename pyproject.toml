@@ -10,7 +10,7 @@ dependencies = [
     "polars>=1.7.0",
     "pysam>=0.22.1",
     "tqdm>=4.66.5",
-    "libscibio @ https://test-files.pythonhosted.org/packages/46/fc/383c2af4111635b7992076cb380dbfb5337c401fc6b29e241cc40e3be469/libscibio-0.1.1.tar.gz",
+    "tinyscibio==0.4.0",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
