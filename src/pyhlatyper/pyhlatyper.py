@@ -80,7 +80,7 @@ def run_pyhlatyper() -> int:
     args = parser.parse_args()
 
     outdir = get_parent_dir(args.out)
-    make_dir(outdir, exist_ok=True)
+    make_dir(outdir, exist_ok=True, parents=True)
 
     allele_pop_freq = load_allele_pop_freq(freq_fspath=args.freq)
 
@@ -89,13 +89,6 @@ def run_pyhlatyper() -> int:
     alleles_to_type = collect_alleles_to_type(
         bam_metadata, kept=allele_pop_freq["Allele"].to_list()
     )
-
-    # score_df = score_per_allele_v2(
-    #     allele="hla_c_01_02_01", bam_fspath=args.bam, min_ecnt=1
-    # )
-    # with pl.Config(fmt_str_lengths=1000, set_tbl_cols=-1):
-    #     print(score_df.head())
-    # raise SystemExit
 
     rg = bam_metadata.read_groups
     if len(rg) > 1:
@@ -123,18 +116,14 @@ def run_pyhlatyper() -> int:
     winner_scores = a1_scores.join(
         a1_winners, on=["gene", "allele"], how="inner"
     )
-    with pl.Config(fmt_str_lengths=1000, set_tbl_cols=-1):
-        print(a1_scores.head())
-        print(a1_winners)
-    raise SystemExit
 
     out_a2 = outdir / f"{rg_sm}.a2.tsv"
     a2_scores = score_a_two(
         a1_scores=a1_scores,
         a1_winners=winner_scores,
-        out=out_a2,
         nproc=args.nproc,
     )
+    a2_scores.write_csv(out_a2, separator="\t")
     a2_winners = get_winners(allele_scores=a2_scores)
 
     hla_res = f"{outdir}/{rg_sm}.hlatyping.res.tsv"
