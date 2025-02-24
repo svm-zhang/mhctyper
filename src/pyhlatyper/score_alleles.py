@@ -112,7 +112,6 @@ def score_a_one(
             total=len(alleles_to_score),  # shows pbar
             desc="Score first allele: ",
             ncols=100,  # define width
-            leave=False,
         )
         for res in allele_iterator:
             if res is None:
@@ -123,7 +122,7 @@ def score_a_one(
             )
             score_tables.append(res)
     if not score_tables:
-        raise ValueError("Failed to score for any alleles")
+        raise ValueError("Failed to score for any first alleles.")
     scores = pl.concat([s for s in score_tables])
     return scores
 
@@ -153,22 +152,26 @@ def score_a_two(
 ) -> pl.DataFrame:
     score_tables: list[pl.DataFrame] = []
     genes = a1_winners["gene"].unique().to_list()
-    # nproc likely more than number of genes, only spawn # procs
-    # based on # genes
     nproc = min(nproc, len(genes))
-    # I actually dont think need to parallele this
-    # but until that day...
     with get_context("spawn").Pool(processes=nproc) as pool:
-        for res in pool.imap_unordered(
-            partial(
-                score_second_by_gene,
-                a1_scores=a1_scores,
-                a1_winners=a1_winners,
+        gene_iterator = tqdm(
+            pool.imap_unordered(
+                partial(
+                    score_second_by_gene,
+                    a1_scores=a1_scores,
+                    a1_winners=a1_winners,
+                ),
+                genes,
             ),
-            genes,
-        ):
+            total=len(genes),
+            desc="Score second allele: ",
+            ncols=100,
+        )
+        for res in gene_iterator:
             if res is None:
                 continue
             score_tables.append(res)
+    if not score_tables:
+        raise ValueError("Failed to score for any second alleles.")
     a2_scores = pl.concat(score_tables)
     return a2_scores
