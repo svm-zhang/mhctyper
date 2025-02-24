@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Union
 
 import pysam
-from libscibio import parse_path
+from tinyscibio import parse_path
 
 
 @dataclass
