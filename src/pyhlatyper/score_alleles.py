@@ -1,22 +1,23 @@
 import math
 import os
-from collections.abc import Sequence
 from functools import partial
 from multiprocessing import get_context
 
 import numpy as np
 import polars as pl
-import pysam
+from tinyscibio import BAMetadata, walk_bam
 from tqdm import tqdm
 
-from .bam import count_mismatch_events, count_unaligned_events
+from .hla_allele import HLAllelePattern, decompose
 
 
 def score_log_liklihood(
-    base_qs: Sequence[int], md: Sequence[str], scale=math.exp(23)
+    row: dict[str, np.ndarray], scale=math.exp(23)
 ) -> float:
     score: float = 0.0
     start, end = 0, 0
+    base_qs = row["bqs"]
+    md = row["mds"]
     for i in range(len(md)):
         if md[i].startswith("^"):
             continue
@@ -37,58 +38,51 @@ def score_log_liklihood(
 def score_per_allele(
     allele: str, bam_fspath: str, min_ecnt: int
 ) -> pl.DataFrame:
-    ids: list[str] = []
-    scores: list[float] = []
-    with pysam.AlignmentFile(bam_fspath, "rb") as bamf:
-        for aln in bamf.fetch(contig=allele):
-            # skip alignments marked as QCFAIL and Supplementary
-            if aln.is_qcfail or aln.is_supplementary:
-                continue
-            # skip alignment that are not properly mapped
-            if not aln.is_proper_pair:
-                continue
-            if aln.query_qualities is None:
-                raise TypeError(
-                    "QUAL should not be NoneType in the alignment record"
-                )
-            if aln.query_name is None:
-                raise TypeError(
-                    "QNAME should not be NoneType in the alignment record"
-                )
-            if aln.cigarstring is None:
-                raise TypeError()
-            if not aln.has_tag("MD"):
-                raise TypeError()
+    ap = HLAllelePattern()
+    hla_allele = decompose(allele, ap)
+    hla_gene = f"{hla_allele.prefix}{hla_allele.locus}"
 
-            n_unaligned_events = count_unaligned_events(aln.cigarstring)
-            if n_unaligned_events > 0:
-                continue
-            n_mm_events = count_mismatch_events(str(aln.get_tag("MD")))
-            if n_mm_events > min_ecnt:
-                continue
-
-            ids += [aln.query_name]
-            scores += [
-                score_log_liklihood(
-                    aln.query_qualities, str(aln.get_tag("MD"))
-                )
-            ]
-
-        score_df = pl.DataFrame(
-            {
-                "ids": ids,
-                "scores": scores,
-            },
-        )
-        score_df = (
-            score_df.with_columns(pl.col("ids").count().over("ids").alias("n"))
-            .filter(pl.col("n") == 2)
-            .drop("n")
-            .group_by("ids")
-            .agg(pl.col("scores").sum())
-            .with_columns(allele=pl.lit(allele))
-        )
-        return score_df
+    bametadata = BAMetadata(bam_fspath)
+    df = walk_bam(
+        bam_fspath,
+        allele,
+        exclude=3584,
+        return_ecnt=True,
+        return_bq=True,
+        return_md=True,
+        return_qname=True,
+    )
+    # walk_bam returns qname as id
+    # convert it back to qname
+    df = df.with_columns(
+        pl.col("rnames").replace_strict(bametadata.idx2seqname())
+    )
+    df = df.with_columns(
+        pl.col("qnames").count().over("qnames").alias("n")
+    ).filter(
+        (pl.col("n") == 2)  # we only want paired alignments
+        & (pl.col("mm_ecnt") + pl.col("indel_ecnt") <= min_ecnt)  # good aln
+    )
+    # we convert dtype of bqs and mds column to get ready for score likelihood
+    df = df.with_columns(
+        pl.col("bqs").map_elements(
+            lambda x: x.tolist(),
+            return_dtype=pl.List(pl.UInt8),
+        ),
+        pl.col("mds").map_elements(
+            lambda x: x, return_dtype=pl.List(pl.String)
+        ),
+    )
+    # score the likelihood given bqs and mds
+    df = df.with_columns(
+        pl.struct(["bqs", "mds"])
+        .map_elements(score_log_liklihood, return_dtype=pl.Float64)
+        .alias("scores"),
+    )
+    # Sum up the score per aligned pair
+    df = df.group_by("qnames").agg(pl.col("scores").sum())
+    df = df.with_columns(allele=pl.lit(allele), gene=pl.lit(hla_gene))
+    return df
 
 
 def score_a_one(
@@ -117,6 +111,10 @@ def score_a_one(
                 if res is None:
                     continue
                 score_tables.append(res)
+    if not score_tables:
+        raise ValueError(
+            "It seems there is no score table returned for any alleles."
+        )
     scores = pl.concat([s for s in score_tables])
     return scores
 
@@ -139,7 +137,7 @@ def score_second_by_gene(
     return score_table
 
 
-def score_second(
+def score_a_two(
     a1_scores: pl.DataFrame, a1_winners: pl.DataFrame, out: str, nproc: int = 8
 ) -> pl.DataFrame:
     if os.path.exists(out):
