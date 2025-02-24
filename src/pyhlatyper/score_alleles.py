@@ -5,7 +5,7 @@ from multiprocessing import get_context
 
 import numpy as np
 import polars as pl
-from tinyscibio import BAMetadata, walk_bam
+from tinyscibio import BAMetadata, _PathLike, walk_bam
 from tqdm import tqdm
 
 from .hla_allele import HLAllelePattern, decompose
@@ -37,7 +37,7 @@ def score_log_liklihood(
 
 def score_per_allele(
     allele: str, bam_fspath: str, min_ecnt: int
-) -> pl.DataFrame:
+) -> pl.DataFrame | None:
     ap = HLAllelePattern()
     hla_allele = decompose(allele, ap)
     hla_gene = f"{hla_allele.prefix}{hla_allele.locus}"
@@ -52,17 +52,28 @@ def score_per_allele(
         return_md=True,
         return_qname=True,
     )
-    # walk_bam returns qname as id
-    # convert it back to qname
+    # walk_bam returns rname as id
+    # convert it back to rname
     df = df.with_columns(
-        pl.col("rnames").replace_strict(bametadata.idx2seqname())
+        pl.col("rnames").replace_strict(bametadata.idx2seqname()),
     )
-    df = df.with_columns(
-        pl.col("qnames").count().over("qnames").alias("n")
-    ).filter(
-        (pl.col("n") == 2)  # we only want paired alignments
-        & (pl.col("mm_ecnt") + pl.col("indel_ecnt") <= min_ecnt)  # good aln
+    df = df.filter(
+        (pl.col("indel_ecnt") == 0)
+        & (pl.col("mm_ecnt") <= min_ecnt)  # good aln
+        & (pl.col("propers"))
     )
+    # we only keep read in pairs after applying above filters
+    # do not do the following before the above
+    df = (
+        df.with_columns(
+            pl.col("qnames").count().over("qnames").alias("n"),
+        )
+        .filter(pl.col("n") == 2)
+        .drop("n")
+    )
+
+    if df.shape[0] == 0:
+        return None
     # we convert dtype of bqs and mds column to get ready for score likelihood
     df = df.with_columns(
         pl.col("bqs").map_elements(
@@ -120,7 +131,7 @@ def score_second_by_gene(
 ) -> pl.DataFrame:
     a1_winners = a1_winners.filter(pl.col("gene") == gene)
     a1_scores = a1_scores.filter(pl.col("gene") == gene)
-    score_table = a1_scores.join(a1_winners, on=["ids", "gene"], how="left")
+    score_table = a1_scores.join(a1_winners, on=["qnames", "gene"], how="left")
     score_table = score_table.with_columns(
         pl.col("scores_right").fill_null(0.0)
     )
@@ -134,14 +145,10 @@ def score_second_by_gene(
 
 
 def score_a_two(
-    a1_scores: pl.DataFrame, a1_winners: pl.DataFrame, out: str, nproc: int = 8
+    a1_scores: pl.DataFrame,
+    a1_winners: pl.DataFrame,
+    nproc: int = 8,
 ) -> pl.DataFrame:
-    if os.path.exists(out):
-        return pl.read_csv(
-            out,
-            separator="\t",
-        )
-
     score_tables: list[pl.DataFrame] = []
     genes = a1_winners["gene"].unique().to_list()
     # nproc likely more than number of genes, only spawn # procs
@@ -162,5 +169,4 @@ def score_a_two(
                 continue
             score_tables.append(res)
     a2_scores = pl.concat(score_tables)
-    a2_scores.write_csv(out, separator="\t")
     return a2_scores
