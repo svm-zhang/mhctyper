@@ -1,6 +1,6 @@
 import argparse
 
-from libscibio import parse_path
+from tinyscibio import parse_path
 
 
 def parse_cmd() -> argparse.ArgumentParser:
