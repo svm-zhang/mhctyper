@@ -122,6 +122,8 @@ def score_a_one(
                 {"allele": f"{res['allele'].unique().item()}"}
             )
             score_tables.append(res)
+    if not score_tables:
+        raise ValueError("Failed to score for any alleles")
     scores = pl.concat([s for s in score_tables])
     return scores
 
