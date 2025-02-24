@@ -93,28 +93,24 @@ def score_a_one(
 ) -> pl.DataFrame:
     score_tables: list[pl.DataFrame] = []
     with get_context("spawn").Pool(processes=nproc) as pool:
-        with tqdm(
-            total=len(alleles_to_score),
-            desc="extract_aln",
-            ncols=100,
+        allele_iterator = tqdm(
+            pool.imap_unordered(
+                partial(score_per_allele, bam_fspath=bam, min_ecnt=min_ecnt),
+                alleles_to_score,
+            ),
+            total=len(alleles_to_score),  # shows pbar
+            desc="Score first allele: ",
+            ncols=100,  # define width
             leave=False,
-        ) as pbar:
-            for res in tqdm(
-                pool.imap_unordered(
-                    partial(
-                        score_per_allele, bam_fspath=bam, min_ecnt=min_ecnt
-                    ),
-                    alleles_to_score,
-                )
-            ):
-                pbar.update()
-                if res is None:
-                    continue
-                score_tables.append(res)
-    if not score_tables:
-        raise ValueError(
-            "It seems there is no score table returned for any alleles."
         )
+        for res in allele_iterator:
+            if res is None:
+                continue
+            # display allele being processed
+            allele_iterator.set_postfix(
+                {"allele": f"{res['allele'].unique().item()}"}
+            )
+            score_tables.append(res)
     scores = pl.concat([s for s in score_tables])
     return scores
 
