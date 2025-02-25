@@ -1,14 +1,15 @@
 import math
-import os
+import sys
 from functools import partial
 from multiprocessing import get_context
 
 import numpy as np
 import polars as pl
-from tinyscibio import BAMetadata, _PathLike, walk_bam
+from tinyscibio import BAMetadata, walk_bam
 from tqdm import tqdm
 
 from .hla_allele import HLAllelePattern, decompose
+from .logger import logger
 
 
 def score_log_liklihood(
@@ -102,28 +103,37 @@ def score_a_one(
     min_ecnt: int,
     nproc: int = 8,
 ) -> pl.DataFrame:
-    score_tables: list[pl.DataFrame] = []
-    with get_context("spawn").Pool(processes=nproc) as pool:
-        allele_iterator = tqdm(
-            pool.imap_unordered(
-                partial(score_per_allele, bam_fspath=bam, min_ecnt=min_ecnt),
-                alleles_to_score,
-            ),
-            total=len(alleles_to_score),  # shows pbar
-            desc="Score first allele: ",
-            ncols=100,  # define width
-        )
-        for res in allele_iterator:
-            if res is None:
-                continue
-            # display allele being processed
-            allele_iterator.set_postfix(
-                {"allele": f"{res['allele'].unique().item()}"}
+    logger.info("Score first allele.")
+    try:
+        score_tables: list[pl.DataFrame] = []
+        logger.debug(f"# alleles to score: {len(alleles_to_score)}.")
+        with get_context("spawn").Pool(processes=nproc) as pool:
+            allele_iterator = tqdm(
+                pool.imap_unordered(
+                    partial(
+                        score_per_allele, bam_fspath=bam, min_ecnt=min_ecnt
+                    ),
+                    alleles_to_score,
+                ),
+                total=len(alleles_to_score),  # shows pbar
+                desc="Score first allele: ",
+                ncols=100,  # define width
             )
-            score_tables.append(res)
-    if not score_tables:
-        raise ValueError("Failed to score for any first alleles.")
-    scores = pl.concat([s for s in score_tables])
+            for res in allele_iterator:
+                if res is None:
+                    continue
+                # display allele being processed
+                allele_iterator.set_postfix(
+                    {"allele": f"{res['allele'].unique().item()}"}
+                )
+                score_tables.append(res)
+        if not score_tables:
+            raise ValueError("Failed to score for any first alleles.")
+        scores = pl.concat([s for s in score_tables])
+        logger.info(f"Alleles scored: {len(score_tables)}.")
+    except ValueError as e:
+        logger.error(e)
+        sys.exit(1)
     return scores
 
 
@@ -150,28 +160,50 @@ def score_a_two(
     a1_winners: pl.DataFrame,
     nproc: int = 8,
 ) -> pl.DataFrame:
-    score_tables: list[pl.DataFrame] = []
-    genes = a1_winners["gene"].unique().to_list()
-    nproc = min(nproc, len(genes))
-    with get_context("spawn").Pool(processes=nproc) as pool:
-        gene_iterator = tqdm(
-            pool.imap_unordered(
-                partial(
-                    score_second_by_gene,
-                    a1_scores=a1_scores,
-                    a1_winners=a1_winners,
+    logger.info("Score second allele.")
+    try:
+        score_tables: list[pl.DataFrame] = []
+        genes = a1_winners["gene"].unique().to_list()
+        nproc = min(nproc, len(genes))
+        with get_context("spawn").Pool(processes=nproc) as pool:
+            gene_iterator = tqdm(
+                pool.imap_unordered(
+                    partial(
+                        score_second_by_gene,
+                        a1_scores=a1_scores,
+                        a1_winners=a1_winners,
+                    ),
+                    genes,
                 ),
-                genes,
-            ),
-            total=len(genes),
-            desc="Score second allele: ",
-            ncols=100,
-        )
-        for res in gene_iterator:
-            if res is None:
-                continue
-            score_tables.append(res)
-    if not score_tables:
-        raise ValueError("Failed to score for any second alleles.")
-    a2_scores = pl.concat(score_tables)
-    return a2_scores
+                total=len(genes),
+                desc="Score second allele: ",
+                ncols=100,
+            )
+            for res in gene_iterator:
+                if res is None:
+                    continue
+                score_tables.append(res)
+        if not score_tables:
+            raise ValueError("Failed to score for any second alleles.")
+        a2_scores = pl.concat(score_tables)
+        return a2_scores
+    except ValueError as e:
+        logger.error(e)
+        sys.exit(1)
+
+
+def get_winners(allele_scores: pl.DataFrame) -> pl.DataFrame:
+    # round scores to 4 decimal places to avoid precision
+    # problem when getting alleles whose scores equal to max scores
+    tot_scores = allele_scores.group_by(["allele", "gene"]).agg(
+        pl.col("scores").sum().round(4)
+    )
+    winners = tot_scores.filter(
+        pl.col("scores") == pl.col("scores").max().over("gene")
+    )
+    # when there is a tie in scores for each gene group,
+    # select allele with least string value lexicographically
+    # e.g. hla_a_26_01_24 and hla_a_26_01_01 (latter selected)
+    winners = winners.sort(by=["allele"]).unique(subset="gene", keep="first")
+    winners = winners.rename({"scores": "tot_scores"})
+    return winners
