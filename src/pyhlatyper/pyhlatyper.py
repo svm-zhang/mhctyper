@@ -19,11 +19,19 @@ def run_pyhlatyper() -> int:
     parser = parse_cmd()
     args = parser.parse_args()
 
-    logger.initialize(args.debug)
-    logger.info(f"Start HLA typing from given BAM file: {args.bam}")
-
     outdir = get_parent_dir(args.out)
     make_dir(outdir, exist_ok=True, parents=True)
+
+    # set up logger accordingly
+    if args.debug:
+        debug_log_fspath = outdir / f"{__name__}.debug.log"
+        if debug_log_fspath.exists():
+            debug_log_fspath.unlink()
+        logger.initialize(args.debug, debug_log_fspath)
+    else:
+        logger.initialize(args.debug)
+
+    logger.info(f"Start HLA typing from given BAM file: {args.bam}")
 
     allele_pop_freq = load_allele_pop_freq(freq_fspath=args.freq)
 
@@ -43,6 +51,7 @@ def run_pyhlatyper() -> int:
             bam=args.bam,
             min_ecnt=args.min_ecnt,
             nproc=args.nproc,
+            debug=args.debug,
         )
         a1_scores.write_csv(out_a1, separator="\t")
     else:
