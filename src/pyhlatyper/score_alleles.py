@@ -134,14 +134,21 @@ def score_a_one(
     debug: bool = False,
 ) -> pl.DataFrame:
     # gets the file handler
-    log_fh = next(
-        iter(
-            [h for h in logger.handlers if isinstance(h, logging.FileHandler)]
+    log_fspath = None
+    if debug:
+        log_fh = next(
+            iter(
+                [
+                    h
+                    for h in logger.handlers
+                    if isinstance(h, logging.FileHandler)
+                ]
+            )
         )
-    )
-    # set nproc to 1 when in debug mode
-    logger.debug("Debug mode: setting nproc to 1.")
-    nproc = 1 if debug else nproc
+        log_fspath = log_fh.baseFilename
+        # set nproc to 1 when in debug mode
+        logger.debug("Debug mode: setting nproc to 1.")
+        nproc = 1
     try:
         logger.info("Score first allele.")
         score_tables: list[pl.DataFrame] = []
@@ -153,7 +160,7 @@ def score_a_one(
                         score_per_allele,
                         bam_fspath=bam,
                         min_ecnt=min_ecnt,
-                        log_fspath=log_fh.baseFilename,  # pass to child proc
+                        log_fspath=log_fspath,  # pass to child proc
                     ),
                     alleles_to_score,
                 ),
