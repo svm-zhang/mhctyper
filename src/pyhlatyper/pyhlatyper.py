@@ -2,82 +2,25 @@
 
 from __future__ import annotations
 
-import warnings
-from pprint import pprint
-from typing import TYPE_CHECKING
-
 import polars as pl
 from tinyscibio import BAMetadata, get_parent_dir, make_dir
 
 from .cli import parse_cmd
-from .hla_allele import HLAllelePattern, reduce_resolution
-from .score_alleles import score_a_one, score_a_two, score_per_allele
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-    from typing import Optional
-
-    from tinyscibio import _PathLike
-
-
-def get_winners(allele_scores: pl.DataFrame) -> pl.DataFrame:
-    # round scores to 4 decimal places to avoid precision
-    # problem when getting alleles whose scores equal to max scores
-    tot_scores = allele_scores.group_by(["allele", "gene"]).agg(
-        pl.col("scores").sum().round(4)
-    )
-    winners = tot_scores.filter(
-        pl.col("scores") == pl.col("scores").max().over("gene")
-    )
-    # when there is a tie in scores for each gene group,
-    # select allele with least string value lexicographically
-    # e.g. hla_a_26_01_24 and hla_a_26_01_01 (latter selected)
-    winners = winners.sort(by=["allele"]).unique(subset="gene", keep="first")
-    winners = winners.rename({"scores": "tot_scores"})
-    return winners
-
-
-def load_allele_pop_freq(freq_fspath: _PathLike) -> pl.DataFrame:
-    """Load allele population frequency data"""
-    freq_df = pl.read_csv(freq_fspath, separator="\t")
-    # remove supertype has all zero pop frequency
-    return freq_df.filter(
-        pl.fold(0, lambda acc, s: acc + s, pl.all().exclude(pl.String)) > 0.0
-    )
-
-
-def collect_alleles_to_type(
-    bam_metadata: BAMetadata,
-    kept: Optional[Sequence[str]] = None,
-    # bam: _PathLike, kept: Optional[Sequence[str]] = None
-) -> list[str]:
-    """Collect HLA alleles to type"""
-    ap = HLAllelePattern(resolution=2)
-    alleles_df = pl.DataFrame({"Allele": bam_metadata.seqnames()})
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        # alleles = list(map(lambda a: reduce_resolution(a, ap), alleles))
-        # if kept is not None:
-        #     alleles = [a for a in alleles if a in kept]
-        if kept is not None:
-            alleles_df = alleles_df.with_columns(
-                pl.col("Allele")
-                .map_elements(
-                    lambda c: reduce_resolution(c, ap), return_dtype=pl.String
-                )
-                .alias("D4")
-            ).filter(pl.col("D4").is_in(kept))
-    alleles = alleles_df["Allele"].to_list()
-    if not alleles:
-        raise ValueError("Failed to collect any alleles for typing")
-    pprint(f"[INFO]: Collected {len(alleles)} alleles to type")
-
-    return alleles
+from .logger import logger
+from .score_alleles import get_winners, score_a_one, score_a_two
+from .utils import (
+    collect_alleles_to_type,
+    load_allele_pop_freq,
+    load_rg_sm_from_bam,
+)
 
 
 def run_pyhlatyper() -> int:
     parser = parse_cmd()
     args = parser.parse_args()
+
+    logger.initialize(args.debug)
+    logger.info(f"Start HLA typing from given BAM file: {args.bam}")
 
     outdir = get_parent_dir(args.out)
     make_dir(outdir, exist_ok=True, parents=True)
@@ -90,15 +33,8 @@ def run_pyhlatyper() -> int:
         bam_metadata, kept=allele_pop_freq["Allele"].to_list()
     )
 
-    rg = bam_metadata.read_groups
-    if len(rg) > 1:
-        raise ValueError(f"Found more than 1 read groups: {rg}")
-    rg_sm = next(iter(rg)).get("SM", None)
-    if rg_sm is None:
-        raise ValueError(
-            "Failed to get SM from read group. "
-            f"Please check parsed read group: {rg}"
-        )
+    rg_sm = load_rg_sm_from_bam(bam_metadata)
+
     out_a1 = outdir / f"{rg_sm}.a1.tsv"
     a1_scores = pl.DataFrame()
     if not out_a1.exists():
@@ -112,6 +48,7 @@ def run_pyhlatyper() -> int:
     else:
         a1_scores = pl.read_csv(out_a1, separator="\t")
 
+    logger.info("Get winner for the first typed allele.")
     a1_winners = get_winners(allele_scores=a1_scores)
     winner_scores = a1_scores.join(
         a1_winners, on=["gene", "allele"], how="inner"
@@ -124,13 +61,15 @@ def run_pyhlatyper() -> int:
         nproc=args.nproc,
     )
     a2_scores.write_csv(out_a2, separator="\t")
+    logger.info("Get winner for the second typed allele.")
     a2_winners = get_winners(allele_scores=a2_scores)
 
+    logger.info("Combine winnes for both first and second alleles.")
     hla_res = f"{outdir}/{rg_sm}.hlatyping.res.tsv"
     hla_res_df = pl.concat([a1_winners, a2_winners])
     hla_res_df = hla_res_df.with_columns(sample=pl.lit(rg_sm)).sort(
         by="allele"
     )
-    print(hla_res_df)
+    logger.info(f"Final HLA typing result: {hla_res_df}")
     hla_res_df.write_csv(hla_res, separator="\t")
     return 0
