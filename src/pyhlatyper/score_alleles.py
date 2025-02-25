@@ -1,7 +1,9 @@
+import logging
 import math
 import sys
 from functools import partial
 from multiprocessing import get_context
+from typing import Optional
 
 import numpy as np
 import polars as pl
@@ -37,11 +39,19 @@ def score_log_liklihood(
 
 
 def score_per_allele(
-    allele: str, bam_fspath: str, min_ecnt: int
+    allele: str,
+    bam_fspath: str,
+    min_ecnt: int,
+    log_fspath: Optional[str] = None,
 ) -> pl.DataFrame | None:
+    debug = True if log_fspath is not None else False
+    logger.initialize(debug, log_fspath)
+
     ap = HLAllelePattern()
     hla_allele = decompose(allele, ap)
+    logger.debug(f"{hla_allele=}")
     hla_gene = f"{hla_allele.prefix}{hla_allele.locus}"
+    logger.debug(f"{hla_gene=}")
 
     bametadata = BAMetadata(bam_fspath)
     df = walk_bam(
@@ -58,10 +68,27 @@ def score_per_allele(
     df = df.with_columns(
         pl.col("rnames").replace_strict(bametadata.idx2seqname()),
     )
+    logger.debug(f"walk_bam returns {df.shape[0]} alignments.")
+    logger.debug(
+        f"walk_bam return {df.filter(~ pl.col('propers')).shape[0]} "
+        "non-proper alignments."
+    )
+    logger.debug(
+        f"walk_bam return {df.filter(pl.col('indel_ecnt') > 0).shape[0]} "
+        "alignments with indels."
+    )
+    logger.debug(
+        f"walk_bam return {df.filter(pl.col('mm_ecnt') > min_ecnt).shape[0]} "
+        "alignments with mms more than allowed min_ecnt."
+    )
     df = df.filter(
         (pl.col("indel_ecnt") == 0)
         & (pl.col("mm_ecnt") <= min_ecnt)  # good aln
         & (pl.col("propers"))
+    )
+    logger.debug(
+        f"{df.shape[0]} alignments left after filtering "
+        "for proper, indel_ecnt, and mm_enct."
     )
     # we only keep read in pairs after applying above filters
     # do not do the following before the above
@@ -72,8 +99,9 @@ def score_per_allele(
         .filter(pl.col("n") == 2)
         .drop("n")
     )
-
+    logger.debug(f"{df.shape[0]} alignments left after filtering for paired.")
     if df.shape[0] == 0:
+        logger.debug("no alignments left for scoring after filtering. Return")
         return None
     # we convert dtype of bqs and mds column to get ready for score likelihood
     df = df.with_columns(
@@ -93,6 +121,7 @@ def score_per_allele(
     )
     # Sum up the score per aligned pair
     df = df.group_by("qnames").agg(pl.col("scores").sum())
+    logger.debug(f"After score and sum per pair: {df}")
     df = df.with_columns(allele=pl.lit(allele), gene=pl.lit(hla_gene))
     return df
 
@@ -102,28 +131,41 @@ def score_a_one(
     bam: str,
     min_ecnt: int,
     nproc: int = 8,
+    debug: bool = False,
 ) -> pl.DataFrame:
-    logger.info("Score first allele.")
+    # gets the file handler
+    log_fh = next(
+        iter(
+            [h for h in logger.handlers if isinstance(h, logging.FileHandler)]
+        )
+    )
+    # set nproc to 1 when in debug mode
+    logger.debug("Debug mode: setting nproc to 1.")
+    nproc = 1 if debug else nproc
     try:
+        logger.info("Score first allele.")
         score_tables: list[pl.DataFrame] = []
         logger.debug(f"# alleles to score: {len(alleles_to_score)}.")
         with get_context("spawn").Pool(processes=nproc) as pool:
-            allele_iterator = tqdm(
+            task_iterator = tqdm(
                 pool.imap_unordered(
                     partial(
-                        score_per_allele, bam_fspath=bam, min_ecnt=min_ecnt
+                        score_per_allele,
+                        bam_fspath=bam,
+                        min_ecnt=min_ecnt,
+                        log_fspath=log_fh.baseFilename,  # pass to child proc
                     ),
                     alleles_to_score,
                 ),
-                total=len(alleles_to_score),  # shows pbar
+                total=len(alleles_to_score),
                 desc="Score first allele: ",
                 ncols=100,  # define width
             )
-            for res in allele_iterator:
+            for res in task_iterator:
                 if res is None:
                     continue
                 # display allele being processed
-                allele_iterator.set_postfix(
+                task_iterator.set_postfix(
                     {"allele": f"{res['allele'].unique().item()}"}
                 )
                 score_tables.append(res)
