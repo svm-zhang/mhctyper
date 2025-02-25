@@ -47,4 +47,7 @@ def parse_cmd() -> argparse.ArgumentParser:
         default=8,
         help="specify # processes to use (8)",
     )
+    parser.add_argument(
+        "--debug", action="store_true", help="specify to enter debug mode."
+    )
     return parser
