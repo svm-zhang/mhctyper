@@ -1,10 +1,41 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = [
+  "hatchling", "hatch-vcs"
+]
+
 [project]
 name = "mhctyper"
-version = "0.1.0"
-description = "Add your description here"
-authors = [
-    { name = "simo", email = "svm.zhang@gmail.com" }
+description = "MHC Class I and II typer based on polysolver algorithm."
+keywords = [
+  "bioinformatics",
+  "genomics",
+  "sequencing",
+  "HLA typing"
 ]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Topic :: Software Development :: Libraries"
+]
+urls.Source = "https://github.com/svm-zhang/mhctyper"
+urls.Documentation = "https://svm-zhang.github.io/mhctyper/"
+urls.Issues = "https://github.com/svm-zhang/mhctyper/issues"
+license = "MIT"
+authors = [
+    { name = "Simo Zhang", email = "svm.zhang@gmail.com" }
+]
+maintainers = [
+    { name = "Simo Zhang", email = "svm.zhang@gmail.com" }
+]
+dynamic = ["version"]
 dependencies = [
     "numpy>=2.1.1",
     "polars>=1.7.0",
@@ -15,19 +46,19 @@ dependencies = [
 readme = "README.md"
 requires-python = ">= 3.10"
 
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/mhctyper"]
-
-
 [project.scripts]
 mhctyper = "mhctyper:run_mhctyper"
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.hatch]
+metadata.allow-direct-references = true
+build.targets.sdist.include = [
+  "/src",
+  "/tests",
+  "/tox.ini"
+]
+build.targets.wheel.packages = ["src/mhctyper"]
+build.hooks.vcs.version-file = "src/mhctyper/_version.py"
+version.source = "vcs"
 
 [tool.rye]
 managed = true
