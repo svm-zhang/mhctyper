@@ -54,7 +54,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.10"
 
       - name: Install pip and this package
         run: |
@@ -63,6 +63,8 @@ jobs:
 
       - name: Import this package and print out version
         run: |
+          mhctyper -h
+          which python3
           python3 -c "import mhctyper; print(mhctyper.__version__)"
 
   release_to_pypi:
