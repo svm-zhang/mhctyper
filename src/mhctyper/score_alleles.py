@@ -3,7 +3,7 @@ import math
 import sys
 from functools import partial
 from multiprocessing import get_context
-from typing import Optional
+from typing import Optional, cast
 
 import numpy as np
 import polars as pl
@@ -15,12 +15,12 @@ from .logger import logger
 
 
 def score_log_liklihood(
-    row: dict[str, np.ndarray], scale=math.exp(23)
+    row: dict[str, list[int] | list[str]], scale: float = math.exp(23)
 ) -> float:
     score: float = 0.0
     start, end = 0, 0
-    base_qs = row["bqs"]
-    md = row["mds"]
+    base_qs = cast(list[int], row["bqs"])
+    md = cast(list[str], row["mds"])
     for i in range(len(md)):
         if md[i].startswith("^"):
             continue
