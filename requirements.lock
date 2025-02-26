@@ -19,22 +19,22 @@ idna==3.10
 ncls==0.0.68
     # via tinyscibio
 numpy==2.2.3
+    # via mhctyper
     # via ncls
-    # via pyhlatyper
     # via tinyscibio
 polars==1.23.0
-    # via pyhlatyper
+    # via mhctyper
     # via tinyscibio
 pysam==0.22.1
-    # via pyhlatyper
+    # via mhctyper
     # via tinyscibio
 requests==2.32.3
     # via tinyscibio
 setuptools==75.8.0
     # via tinyscibio
 tinyscibio==0.4.0
-    # via pyhlatyper
+    # via mhctyper
 tqdm==4.66.5
-    # via pyhlatyper
+    # via mhctyper
 urllib3==2.2.3
     # via requests

@@ -1,5 +1,5 @@
 [project]
-name = "pyhlatyper"
+name = "mhctyper"
 version = "0.1.0"
 description = "Add your description here"
 authors = [
@@ -16,7 +16,7 @@ readme = "README.md"
 requires-python = ">= 3.8"
 
 [project.scripts]
-pyhlatyper = "pyhlatyper:run_pyhlatyper"
+mhctyper = "mhctyper:run_mhctyper"
 
 [build-system]
 requires = ["hatchling"]
@@ -34,4 +34,4 @@ dev-dependencies = [
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/pyhlatyper"]
+packages = ["src/mhctyper"]

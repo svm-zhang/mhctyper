@@ -25,18 +25,18 @@ iniconfig==2.0.0
 ncls==0.0.68
     # via tinyscibio
 numpy==2.2.3
+    # via mhctyper
     # via ncls
-    # via pyhlatyper
     # via tinyscibio
 packaging==24.1
     # via pytest
 pluggy==1.5.0
     # via pytest
 polars==1.23.0
-    # via pyhlatyper
+    # via mhctyper
     # via tinyscibio
 pysam==0.22.1
-    # via pyhlatyper
+    # via mhctyper
     # via tinyscibio
 pytest==8.3.3
     # via pytest-cov
@@ -46,12 +46,12 @@ requests==2.32.3
 setuptools==75.8.0
     # via tinyscibio
 tinyscibio==0.4.0
-    # via pyhlatyper
+    # via mhctyper
 tomli==2.0.1
     # via coverage
     # via pytest
 tqdm==4.66.5
-    # via pyhlatyper
+    # via mhctyper
 types-tqdm==4.66.0.20240417
 urllib3==2.2.3
     # via requests
