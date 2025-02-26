@@ -41,9 +41,7 @@ ncls==0.0.68
 numpy==2.2.3
     # via mhctyper
     # via ncls
-    # via numpy-typing
     # via tinyscibio
-numpy-typing==1.1.1
 packaging==24.2
     # via pyproject-api
     # via pytest
@@ -80,14 +78,10 @@ tomli==2.2.1
 tox==4.24.1
 tqdm==4.66.5
     # via mhctyper
-types-requests==2.32.0.20241016
-    # via types-tqdm
-types-tqdm==4.67.0.20241221
 typing-extensions==4.12.2
     # via mypy
     # via tox
 urllib3==2.2.3
     # via requests
-    # via types-requests
 virtualenv==20.29.2
     # via tox

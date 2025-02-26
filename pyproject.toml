@@ -63,12 +63,10 @@ version.source = "vcs"
 [tool.rye]
 managed = true
 dev-dependencies = [
-    "types-tqdm>=4.67.0.20241221",
     "pytest>=8.3.3",
     "pytest-cov>=5.0.0",
     "mypy>=1.15.0",
     "tox>=4.24.1",
-    "numpy-typing>=1.1.1",
 ]
 
 [tool.coverage]
