@@ -3,8 +3,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, cast
 
-from tqdm.auto import tqdm
-
 if TYPE_CHECKING:
     from typing import Optional
 
