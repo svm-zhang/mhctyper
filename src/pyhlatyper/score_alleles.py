@@ -250,6 +250,10 @@ def get_winners(allele_scores: pl.DataFrame) -> pl.DataFrame:
     winners = tot_scores.filter(
         pl.col("scores") == pl.col("scores").max().over("gene")
     )
+    logger.debug("winner alleles who have the max score per locus.")
+    if winners.shape[0] > 3:
+        logger.debug("there are ties in scores for certain gene groups.")
+    logger.debug(winners)
     # when there is a tie in scores for each gene group,
     # select allele with least string value lexicographically
     # e.g. hla_a_26_01_24 and hla_a_26_01_01 (latter selected)
