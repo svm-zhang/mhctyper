@@ -13,7 +13,14 @@ dependencies = [
     "tinyscibio==0.4.0",
 ]
 readme = "README.md"
-requires-python = ">= 3.8"
+requires-python = ">= 3.10"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mhctyper"]
+
 
 [project.scripts]
 mhctyper = "mhctyper:run_mhctyper"
@@ -25,13 +32,40 @@ build-backend = "hatchling.build"
 [tool.rye]
 managed = true
 dev-dependencies = [
-    "types-tqdm>=4.66.0.20240417",
+    "types-tqdm>=4.67.0.20241221",
     "pytest>=8.3.3",
     "pytest-cov>=5.0.0",
+    "mypy>=1.15.0",
+    "tox>=4.24.1",
+    "numpy-typing>=1.1.1",
 ]
 
-[tool.hatch.metadata]
-allow-direct-references = true
+[tool.coverage]
+paths.source = [
+  "src",
+]
+run.branch = true
+run.omit = [
+  "*/_version.py",
+]
+run.source = [
+  "mhctyper"
+]
+run.parallel = true
+report.fail_under = 10
+report.show_missing = true
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/mhctyper"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --tb=auto --cov"
+
+[tool.mypy]
+strict = true
+pretty = true
+overrides = [
+  { module = [
+      "tqdm"
+    ], ignore_missing_imports = true},
+]
+
