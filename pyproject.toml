@@ -1,12 +1,13 @@
 [build-system]
 build-backend = "hatchling.build"
 requires = [
-  "hatchling", "hatch-vcs"
+  "hatchling==1.26.3", "hatch-vcs"
 ]
 
 [project]
 name = "mhctyper"
 description = "MHC Class I and II typer based on polysolver algorithm."
+readme = {file = "README.md", content-type = "text/markdown"}
 keywords = [
   "bioinformatics",
   "genomics",
@@ -14,7 +15,7 @@ keywords = [
   "HLA typing"
 ]
 classifiers = [
-  "Development Status :: 5 - Production/Stable",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
   "Operating System :: POSIX",
@@ -43,7 +44,6 @@ dependencies = [
     "tqdm>=4.66.5",
     "tinyscibio==0.4.0",
 ]
-readme = "README.md"
 requires-python = ">= 3.10"
 
 [project.scripts]
