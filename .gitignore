@@ -20,3 +20,5 @@ wheels/
 .mypy_cache/
 
 .DS_Store
+
+_version.py
