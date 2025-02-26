@@ -44,6 +44,14 @@ def run_mhctyper() -> int:
     rg_sm = load_rg_sm_from_bam(bam_metadata)
 
     out_a1 = outdir / f"{rg_sm}.a1.tsv"
+    out_a2 = outdir / f"{rg_sm}.a2.tsv"
+    hla_res = outdir / f"{rg_sm}.hlatyping.res.tsv"
+    if args.overwrite:
+        logger.info("Overwrite specified. Delete results previously computed.")
+        out_a1.unlink(missing_ok=True)
+        out_a2.unlink(missing_ok=True)
+        hla_res.unlink(missing_ok=True)
+
     a1_scores = pl.DataFrame()
     if not out_a1.exists():
         a1_scores = score_a_one(
@@ -55,6 +63,7 @@ def run_mhctyper() -> int:
         )
         a1_scores.write_csv(out_a1, separator="\t")
     else:
+        logger.info("Found scores of first alleles previously computed.")
         a1_scores = pl.read_csv(out_a1, separator="\t")
 
     logger.info("Get winner for the first typed allele.")
@@ -63,7 +72,6 @@ def run_mhctyper() -> int:
         a1_winners, on=["gene", "allele"], how="inner"
     )
 
-    out_a2 = outdir / f"{rg_sm}.a2.tsv"
     a2_scores = score_a_two(
         a1_scores=a1_scores,
         a1_winners=winner_scores,
@@ -74,7 +82,6 @@ def run_mhctyper() -> int:
     a2_winners = get_winners(allele_scores=a2_scores)
 
     logger.info("Combine winnes for both first and second alleles.")
-    hla_res = f"{outdir}/{rg_sm}.hlatyping.res.tsv"
     hla_res_df = pl.concat([a1_winners, a2_winners])
     hla_res_df = hla_res_df.with_columns(sample=pl.lit(rg_sm)).sort(
         by="allele"
