@@ -48,6 +48,9 @@ def parse_cmd() -> argparse.ArgumentParser:
         help="specify # processes to use (8)",
     )
     parser.add_argument(
+        "--overwrite", action="store_true", help="specify to overwrite scores."
+    )
+    parser.add_argument(
         "--debug", action="store_true", help="specify to enter debug mode."
     )
     return parser
