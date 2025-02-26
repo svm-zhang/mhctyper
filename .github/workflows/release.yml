@@ -1,0 +1,89 @@
+name: Release to PyPI
+
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  dists-artifact-name: python-package-distributions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rye project manager
+        uses: eifinger/setup-rye@v4
+      - name: Build package
+        run: |
+          rye sync
+          rye build
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.dists-artifact-name }}
+          path: dist/*
+
+  testpypi:
+    needs:
+      - build
+
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/mhctyper
+    permissions:
+      id-token: write
+    steps:
+      - name: Download the distribution packages
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.dists-artifact-name }}
+          path: dist/
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@v1.10.3
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  test_install:
+    needs:
+      - testpypi
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install pip and this package
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -i "https://test.pypi.org/simple" --extra-index-url "https://pypi.org/simple" mhctyper
+
+      - name: Import this package and print out version
+        run: |
+          python3 -c "import mhctyper; print(mhctyper.__version__)"
+
+  release_to_pypi:
+    needs:
+      - build
+      - testpypi
+      - test_install
+
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mhctyper
+    permissions:
+      id-token: write
+    steps:
+      - name: Download the distribution packages
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.dists-artifact-name }}
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.10.3
+        with:
+          attestations: true
