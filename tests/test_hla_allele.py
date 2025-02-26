@@ -1,6 +1,6 @@
 import pytest
 
-from pyhlatyper.hla_allele import (
+from mhctyper.hla_allele import (
     HLAllele,
     HLAllelePattern,
     decompose,
