@@ -1,5 +1,3 @@
-from __future__ import annotations
+from mhctyper.mhctyper import run_mhctyper
 
-from pyhlatyper.pyhlatyper import run_pyhlatyper
-
-__all__ = ["run_pyhlatyper"]
+__all__ = ["run_mhctyper"]

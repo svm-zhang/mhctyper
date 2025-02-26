@@ -15,7 +15,7 @@ from .utils import (
 )
 
 
-def run_pyhlatyper() -> int:
+def run_mhctyper() -> int:
     parser = parse_cmd()
     args = parser.parse_args()
 

@@ -1,5 +1,5 @@
 import sys
 
-import pyhlatyper
+import mhctyper
 
-sys.exit(pyhlatyper.run_pyhlatyper())
+sys.exit(mhctyper.run_mhctyper())
