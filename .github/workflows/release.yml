@@ -63,8 +63,6 @@ jobs:
 
       - name: Import this package and print out version
         run: |
-          mhctyper -h
-          which python3
           python3 -c "import mhctyper; print(mhctyper.__version__)"
 
   release_to_pypi:
