@@ -89,6 +89,7 @@ markdown_extensions:
   - pymdownx.tilde
   - toc:
       permalink: true
+  - tables
 
 nav:
   - Home: index.md
