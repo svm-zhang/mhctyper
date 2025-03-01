@@ -19,12 +19,11 @@ def run_mhctyper() -> int:
     parser = parse_cmd()
     args = parser.parse_args()
 
-    outdir = get_parent_dir(args.out)
-    make_dir(outdir, exist_ok=True, parents=True)
+    make_dir(args.outdir, exist_ok=True, parents=True)
 
     # set up logger accordingly
     if args.debug:
-        debug_log_fspath = outdir / f"{__name__}.debug.log"
+        debug_log_fspath = args.outdir / f"{__name__}.debug.log"
         if debug_log_fspath.exists():
             debug_log_fspath.unlink()
         logger.initialize(args.debug, debug_log_fspath)
@@ -43,9 +42,9 @@ def run_mhctyper() -> int:
 
     rg_sm = load_rg_sm_from_bam(bam_metadata)
 
-    out_a1 = outdir / f"{rg_sm}.a1.tsv"
-    out_a2 = outdir / f"{rg_sm}.a2.tsv"
-    hla_res = outdir / f"{rg_sm}.hlatyping.res.tsv"
+    out_a1 = args.outdir / f"{rg_sm}.a1.tsv"
+    out_a2 = args.outdir / f"{rg_sm}.a2.tsv"
+    hla_res = args.outdir / f"{rg_sm}.hlatyping.res.tsv"
     if args.overwrite:
         logger.info("Overwrite specified. Delete results previously computed.")
         out_a1.unlink(missing_ok=True)
