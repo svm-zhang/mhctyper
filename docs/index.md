@@ -2,6 +2,8 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/mhctyper)](https://pypi.org/project/mhctyper/)
 ![Python versions](https://img.shields.io/pypi/pyversions/mhctyper)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/mhctyper)](https://pypistats.org/packages/mhctyper)
+![License](https://img.shields.io/pypi/l/mhctyper)
 
 Polars-accelerated MHC class I and II typing based on Polysolver algorithm.
 
@@ -32,9 +34,9 @@ You can install mhctyper from PyPI
 
 ```bash
 mhctyper --bam "$bam" \
-    --freq "HLA_FREQ.txt" \
-    --outdir "$outdir" \
-    --nproc 8
+--freq "HLA_FREQ.txt" \
+--outdir "$outdir" \
+--nproc 8
 ```
 
 ## Output explain
@@ -53,13 +55,12 @@ and terminates if either no or more than one read group value set.
 
 Score table has following format with self-explanatory columns:
 
-```text
-qnames  scores  allele  gene
-SRR702076.1195861       4645.90100859441        hla_a_01_01_01_01       hla_a
-SRR702076.11670250      4644.914284618211       hla_a_01_01_01_01       hla_a
-SRR702076.3308570       4645.911824273519       hla_a_01_01_01_01       hla_a
-SRR702076.23151566      4645.900731687712       hla_a_01_01_01_01       hla_a
-```
+| qnames               | scores             | allele            | gene   |
+| :------------------- | :----------------- | :---------------- | :----- |
+| SRR702076.1195861    | 4645.90100859441   | hla_a_01_01_01_01 | hla_a  |
+| SRR702076.11670250   | 4644.914284618211  | hla_a_01_01_01_01 | hla_a  |
+| SRR702076.3308570    | 4645.911824273519  | hla_a_01_01_01_01 | hla_a  |
+| SRR702076.23151566   | 4645.900731687712  | hla_a_01_01_01_01 | hla_a  |
 
 Each row represents the score typed for an allele from one read (not a pair).
 
@@ -71,15 +72,14 @@ HLA typing result contains 4 columns:
 - gene: HLA gene locus.
 - tot_scores: total loglikelihood scores for 2 alleles per gene locus.
 
-```text
-   allele  gene    tot_scores  sample
-   hla_a_11_01_01  hla_a   4120184.7405    NA18740
-   hla_a_11_01_01  hla_a   2060092.3702    NA18740
-   hla_b_13_01_01  hla_b   1054296.1982    NA18740
-   hla_b_40_01_02  hla_b   1221557.8978    NA18740
-   hla_c_03_04_04  hla_c   1474826.4096    NA18740
-   hla_c_07_02_10  hla_c   1913741.4495    NA18740
-```
+| allele           | gene     | tot_scores   | sample   |
+| :--------------- | :------- | :----------- | :------- |
+| hla_a_11_01_01   | hla_a    | 4120184.7405 | NA18740  |
+| hla_a_11_01_01   | hla_a    | 2060092.3702 | NA18740  |
+| hla_b_13_01_01   | hla_b    | 1054296.1982 | NA18740  |
+| hla_b_40_01_02   | hla_b    | 1221557.8978 | NA18740  |
+| hla_c_03_04_04   | hla_c    | 1474826.4096 | NA18740  |
+| hla_c_07_02_10   | hla_c    | 1913741.4495 | NA18740  |
 
 ## Silently applied filters
 
