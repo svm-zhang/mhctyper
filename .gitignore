@@ -21,4 +21,6 @@ wheels/
 
 .DS_Store
 
+.tox/
+
 _version.py
