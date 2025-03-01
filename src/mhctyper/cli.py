@@ -17,35 +17,28 @@ def parse_cmd() -> argparse.ArgumentParser:
         metavar="FILE",
         type=parse_path,
         required=True,
-        help="specify path to HLA frequency file",
+        help="specify path to HLA frequency file.",
     )
     parser.add_argument(
-        "--race",
-        metavar="STR",
-        type=str,
-        default="Unknown",
-        help="specify race [default: Unknown]",
-    )
-    parser.add_argument(
-        "--out",
-        metavar="FILE",
+        "--outdir",
+        metavar="DIR",
         type=parse_path,
         required=True,
-        help="specify path to output hlatyping result file",
+        help="specify path to output folder.",
     )
     parser.add_argument(
         "--min_ecnt",
         metavar="INT",
         type=int,
         default=999,
-        help="specify minimum # of mm events (999)",
+        help="specify minimum # of mm events (999).",
     )
     parser.add_argument(
         "--nproc",
         metavar="INT",
         type=int,
         default=8,
-        help="specify # processes to use (8)",
+        help="specify # processes to use (8).",
     )
     parser.add_argument(
         "--overwrite", action="store_true", help="specify to overwrite scores."
