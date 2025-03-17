@@ -12,8 +12,7 @@ Polars-accelerated MHC class I and II typing based on Polysolver algorithm.
 - Supports both class I and II typing with good
   [accuracy](https://github.com/svm-zhang/hla_benchmark?tab=readme-ov-file).
 - Runtime speedup boosted by polars.
-- Minimum I/O operations.
-- Easy integration to workflow/pipeline with better CLI and proper packaging.
+- Minimum I/O operations. Easy integration to workflow/pipeline with better CLI and proper packaging.
 
 ## Installation
 
@@ -81,7 +80,7 @@ HLA typing result contains 4 columns:
 | hla_c_03_04_04   | hla_c    | 1474826.4096 | NA18740  |
 | hla_c_07_02_10   | hla_c    | 1913741.4495 | NA18740  |
 
-## Silently applied filters
+## Filters applied silently
 
 `mhctyper` quietly applies the following filters during typing:
 

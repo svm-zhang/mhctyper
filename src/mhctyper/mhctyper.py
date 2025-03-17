@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import polars as pl
-from tinyscibio import BAMetadata, get_parent_dir, make_dir
+from tinyscibio import BAMetadata, make_dir
 
 from .cli import parse_cmd
 from .logger import logger
@@ -15,26 +17,31 @@ from .utils import (
 )
 
 
-def run_mhctyper() -> int:
-    parser = parse_cmd()
-    args = parser.parse_args()
-
-    make_dir(args.outdir, exist_ok=True, parents=True)
+def run_mhctyper(
+    bam: Path,
+    freq: Path,
+    outdir: Path,
+    min_ecnt: int,
+    nproc: int,
+    debug: bool = False,
+    overwrite: bool = False,
+) -> None:
+    make_dir(outdir, exist_ok=True, parents=True)
 
     # set up logger accordingly
-    if args.debug:
-        debug_log_fspath = args.outdir / f"{__name__}.debug.log"
+    if debug:
+        debug_log_fspath = outdir / f"{__name__}.debug.log"
         if debug_log_fspath.exists():
             debug_log_fspath.unlink()
-        logger.initialize(args.debug, debug_log_fspath)
+        logger.initialize(debug, debug_log_fspath)
     else:
-        logger.initialize(args.debug)
+        logger.initialize(debug)
 
-    logger.info(f"Start HLA typing from given BAM file: {args.bam}")
+    logger.info(f"Start HLA typing from given BAM file: {bam}")
 
-    allele_pop_freq = load_allele_pop_freq(freq_fspath=args.freq)
+    allele_pop_freq = load_allele_pop_freq(freq_fspath=freq)
 
-    bam_metadata = BAMetadata(args.bam)
+    bam_metadata = BAMetadata(str(bam))
     # collect all alleles to type from BAM header
     alleles_to_type = collect_alleles_to_type(
         bam_metadata, kept=allele_pop_freq["Allele"].to_list()
@@ -42,10 +49,10 @@ def run_mhctyper() -> int:
 
     rg_sm = load_rg_sm_from_bam(bam_metadata)
 
-    out_a1 = args.outdir / f"{rg_sm}.a1.tsv"
-    out_a2 = args.outdir / f"{rg_sm}.a2.tsv"
-    hla_res = args.outdir / f"{rg_sm}.hlatyping.res.tsv"
-    if args.overwrite:
+    out_a1 = outdir / f"{rg_sm}.a1.tsv"
+    out_a2 = outdir / f"{rg_sm}.a2.tsv"
+    hla_res = outdir / f"{rg_sm}.hlatyping.res.tsv"
+    if overwrite:
         logger.info("Overwrite specified. Delete results previously computed.")
         out_a1.unlink(missing_ok=True)
         out_a2.unlink(missing_ok=True)
@@ -55,10 +62,10 @@ def run_mhctyper() -> int:
     if not out_a1.exists():
         a1_scores = score_a_one(
             alleles_to_score=alleles_to_type,
-            bam=args.bam,
-            min_ecnt=args.min_ecnt,
-            nproc=args.nproc,
-            debug=args.debug,
+            bam=bam,
+            min_ecnt=min_ecnt,
+            nproc=nproc,
+            debug=debug,
         )
         a1_scores.write_csv(out_a1, separator="\t")
     else:
@@ -74,7 +81,7 @@ def run_mhctyper() -> int:
     a2_scores = score_a_two(
         a1_scores=a1_scores,
         a1_winners=winner_scores,
-        nproc=args.nproc,
+        nproc=nproc,
     )
     a2_scores.write_csv(out_a2, separator="\t")
     logger.info("Get winner for the second typed allele.")
@@ -87,4 +94,19 @@ def run_mhctyper() -> int:
     )
     logger.info(f"Final HLA typing result: {hla_res_df}")
     hla_res_df.write_csv(hla_res, separator="\t")
-    return 0
+
+
+# CLI main
+def mhctyper_main() -> None:
+    parser = parse_cmd()
+    args = parser.parse_args()
+
+    run_mhctyper(
+        bam=args.bam,
+        freq=args.freq,
+        outdir=args.outdir,
+        min_ecnt=args.min_ecnt,
+        nproc=args.nproc,
+        debug=args.debug,
+        overwrite=args.overwrite,
+    )
