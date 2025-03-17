@@ -25,7 +25,7 @@ def run_mhctyper(
     nproc: int,
     debug: bool = False,
     overwrite: bool = False,
-) -> None:
+) -> tuple[pl.DataFrame, Path]:
     make_dir(outdir, exist_ok=True, parents=True)
 
     # set up logger accordingly
@@ -94,6 +94,7 @@ def run_mhctyper(
     )
     logger.info(f"Final HLA typing result: {hla_res_df}")
     hla_res_df.write_csv(hla_res, separator="\t")
+    return (hla_res_df, hla_res)
 
 
 # CLI main
@@ -101,7 +102,7 @@ def mhctyper_main() -> None:
     parser = parse_cmd()
     args = parser.parse_args()
 
-    run_mhctyper(
+    _, _ = run_mhctyper(
         bam=args.bam,
         freq=args.freq,
         outdir=args.outdir,
