@@ -3,6 +3,7 @@ import math
 import sys
 from functools import partial
 from multiprocessing import get_context
+from pathlib import Path
 from typing import Optional, cast
 
 import numpy as np
@@ -40,7 +41,7 @@ def score_log_liklihood(
 
 def score_per_allele(
     allele: str,
-    bam_fspath: str,
+    bam_fspath: Path,
     min_ecnt: int,
     log_fspath: Optional[str] = None,
 ) -> pl.DataFrame | None:
@@ -53,9 +54,9 @@ def score_per_allele(
     hla_gene = f"{hla_allele.prefix}{hla_allele.locus}"
     logger.debug(f"{hla_gene=}")
 
-    bametadata = BAMetadata(bam_fspath)
+    bametadata = BAMetadata(str(bam_fspath))
     df = walk_bam(
-        bam_fspath,
+        str(bam_fspath),
         allele,
         exclude=3584,
         return_ecnt=True,
@@ -128,7 +129,7 @@ def score_per_allele(
 
 def score_a_one(
     alleles_to_score: list[str],
-    bam: str,
+    bam: Path,
     min_ecnt: int,
     nproc: int = 8,
     debug: bool = False,
