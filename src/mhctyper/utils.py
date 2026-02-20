@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import polars as pl
+import polars.selectors as cs
 from tinyscibio import BAMetadata
 
 from .hla_allele import HLAllelePattern, reduce_resolution
@@ -43,9 +44,24 @@ def load_allele_pop_freq(freq_fspath: _PathLike) -> pl.DataFrame:
     logger.info("Load HLA alleles from population frequency file.")
     freq_df = pl.read_csv(freq_fspath, separator="\t")
     # remove supertype has all zero pop frequency
-    return freq_df.filter(
-        pl.fold(0, lambda acc, s: acc + s, pl.all().exclude(pl.String)) > 0.0
-    )
+    # https://github.com/svm-zhang/mhctyper/issues/4
+    # pl.fold returns 0 of dtype 0 when either acc initializes as i32 or
+    # return_dtype is not set. The supercast rule does not seem to apply
+    # https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.fold.html
+    # Below is old solution:
+    # return freq_df.filter(
+    #     pl.fold(0, lambda acc, s: acc + s, pl.all().exclude(pl.String)) > 0.0
+    # )
+    # To fix:
+    # pl.fold(acc=0.0, lambda acc, s: acc+s, pl.exclude(pl.String))
+    # pl.fold(
+    #   acc=0,
+    #   lambda acc, s: acc+s,
+    #   pl.exclude(pl.String),
+    #   return_dtype=pl.Float64
+    # )
+    # Should be better off using pl.sum_horizontal instead
+    return freq_df.filter(pl.sum_horizontal(cs.numeric()) > 0.0)
 
 
 def collect_alleles_to_type(

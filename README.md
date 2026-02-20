@@ -2,7 +2,6 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/mhctyper)](https://pypi.org/project/mhctyper/)
 ![Python versions](https://img.shields.io/pypi/pyversions/mhctyper)
-[![PyPI Downloads](https://img.shields.io/pypi/dm/mhctyper)](https://pypistats.org/packages/mhctyper)
 ![License](https://img.shields.io/pypi/l/mhctyper)
 
 Polars-accelerated MHC class I and II typing based on Polysolver algorithm.
