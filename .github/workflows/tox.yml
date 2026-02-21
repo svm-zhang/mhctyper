@@ -6,13 +6,17 @@ on:
       - main
     paths-ignore:
       - "docs/**"
+      - ".github/**"
       - mkdocs.yml
+      - "README.md"
   pull_request:
     branches:
       - main
     paths-ignore:
       - "docs/**"
+      - ".github/**"
       - mkdocs.yml
+      - "README.md"
   workflow_dispatch:
 
 jobs:
