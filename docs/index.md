@@ -2,17 +2,43 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/mhctyper)](https://pypi.org/project/mhctyper/)
 ![Python versions](https://img.shields.io/pypi/pyversions/mhctyper)
-[![PyPI Downloads](https://img.shields.io/pypi/dm/mhctyper)](https://pypistats.org/packages/mhctyper)
 ![License](https://img.shields.io/pypi/l/mhctyper)
 
-Polars-accelerated MHC class I and II typing based on Polysolver algorithm.
+Faster MHC class I and II typing based on Polysolver algorithm.
 
 ## Features
 
-- Supports both class I and II typing with good
+- Supports both class I and II typing with high
   [accuracy](https://github.com/svm-zhang/hla_benchmark?tab=readme-ov-file).
-- Runtime speedup boosted by polars.
-- Minimum I/O operations. Easy integration to workflow/pipeline with better CLI and proper packaging.
+- Achieves dramatic speedups by eliminating thousands of disk-heavy I/O and
+  leveraging Polars for lighting-fast data manipulation
+- Features a robust CLI and standardized packaging, ensuring seamless integration
+  existing workflow/pipeline.
+
+## Highlights
+
+
+### Alignment tuning
+
+Not all the alignments are suitable for typing. `mhctyper` provides a single,
+customizable parameter, `--min_ecnt`, to filter
+the alignments used in the typing process. Lowering this value prioritizes
+"high quality" data. On the 1000 genome dataset, a value of `1` yields optimal results.
+By default, all alignments are included regardless of the number of mismatch event counts.
+
+
+### Unified output
+
+`mhctyper` replaces the "thousands of files" approach with a single, structured
+tabular output. This unified format eliminates directory clutter and allows for
+streamlined searching, querying, and downstream analysis.
+
+### Smart skip
+Scoring for the first allele accounts for the majority `mhctyper`'s runtime.
+To optimize efficiency, the first-allele score table is cached once
+generated; `mhctyper` then automatically uses the cached results for subsequent
+steps to avoid redundant BAM traversal.
+
 
 ## Installation
 
@@ -88,53 +114,62 @@ HLA typing result contains 4 columns:
 - QC-failed, supplementary, and duplicate-marked alignments are removed
 (exclude sam flag = 3584).
 - Alignments with indels are removed.
-- Alignments with mismatches more than specified value of `--min_ecnt` are
-removed.
-- HLA alleles (their 4-digits representation) who have zero population allele
-frequency across all populations defined in the `HLA_FREQ.txt` file are
+- **Alignments with mismatches more than specified value of `--min_ecnt` are
+removed (see below)**.
+- HLA alleles (their 4-digits representation) who have sum of zero population allele
+frequencies across all populations defined in the `HLA_FREQ.txt` file are
 excluded from typing.
 
+
+## Polysolver comparison
+
+While `mhctyper` implements the core Polysolver algorithm, results may not be
+identical in every case. However, a high degree of concordance between the two
+tools should be expected in the majority runs. 
+
+
+### Troubleshooting
+
+If `mhctyper` and Polysovler produce different results, follow these
+steps to pinpoint the discrepancy:
+
+1. **Reads concordance**: Verify if the "fished" read IDs are identical;
+2. **Bam statistics**: Compare alignment stats of the realigned BAM files
+   using the `sametoosl flagstat`;
+3. **Score difference**: Check scores for the specific alleles in question.
+   Is the numerical difference marginal or significant?
+4. **Manual inspection**: Generate BAM files for the alleles in question to
+   compare alignment stats, CIGAR and MD strings, and/or view alignments in IGV.
+
 ## Notes
-
-### Optimal value for --min_ecnt
-
-`mhctyper` provides a single customizable parameter `--min_ecnt` to control for
-the alignments used in the typing. The lower the value, the more "high quality"
-data is used (but less in quantity). On the 1000 genome dataset, I found
-setting `--min_ecnt` to 1 gives fairly good result. You can tune this parameter
-to find the best value for your data. By default, all alignments, regardless
-of the number of mismatch events allowed, will be used.
 
 ### Race
 
 Unlike the original `polysovler` algorithm, `mhctyper` does not provide a
 `race` option. This is intentional because most of the case we do not have
-such demographic information to begin with. From testing on 1000 genome
+such demographic information to begin with. Upon testing on 1000 Genome
 dataset, this does not affect the typing result.
 
-### Break and continue
 
-Scoring for the first allele will take the majority runtime of `mhctyper`.
-Therefore, once the score table for the first allele is generated, `mhctyper`
-will not repeat it to avoid walking through the BAM file for another time.
-You can use `--overwrite` option to force `mhctyper` to re-score the first
-allele.
+### Debug mode
 
-### Run mhctyper in debug mode
-
-If you encounter errors when running `mhctyper` on your data, you can toggle
-the debug mode to generate a log file under the output folder you specify.
-Sharing the debug file will very useful for quickly identifying the problem(s).
-In debug mode, `mhctyper` will automatically switch to single process and
-ignore the value (8 in the example below) provided via `--nproc` option.
+If encountering errors when running `mhctyper`,
+the debug mode can be toggled to generate a log file under the output folder
+you specify. `mhctyper` will automatically ignore the `--nproc` value and
+switch to the single process mode. Please share this debug file when opening an issue.
 
 ```bash
 mhctyper --bam "$bam" \
     --freq "HLA_FREQ.txt" \
     --outdir "$outdir" \
-    --nproc 8 \
     --debug
 ```
+
+### Overwrite
+
+Use the `--overwrite` flag to force a full clean `mhctyper` re-run. Cached
+results from previous run will be deleted automatically.
+
 
 ## Citation
 
