@@ -1,0 +1,59 @@
+[project]
+site_name = "mhctyper"
+site_description = "MHC class I and II allele typing"
+edit_uri = "edit/main/docs"
+
+repo_name = "svm-zhang/mhctyper"
+repo_url = "https://github.com/svm-zhang/mhctyper"
+copyright = """
+Copyright &copy; 2026 mhctyper author
+"""
+extra_css = ["stylesheets/extra.css"]
+
+# Section for navigation configuration
+nav = ["index.md"]
+
+# Section for theme configuration
+[project.theme]
+font = false
+language = "en"
+
+features = [
+  "announce.dismiss",
+  "content.action.edit",
+  "content.action.view",
+  "content.code.annotate",
+  "content.code.copy",
+  "content.code.select",
+  "content.footnote.tooltips",
+  "content.tabs.link",
+  "header.autohide",
+  "navigation.expand",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "toc.follow",
+  "toc.integrate"
+]
+
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+[project.theme.icon]
+repo = "fontawesome/brands/github"
+edit = "lucide/pencil"
+view = "lucide/view"
+
+
