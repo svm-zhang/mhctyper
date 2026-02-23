@@ -1,10 +1,11 @@
 [project]
 site_name = "mhctyper"
 site_description = "MHC class I and II allele typing"
-edit_uri = "edit/main/docs"
-
+site_author = "Simo V. Zhang"
+site_url = "https://svm-zhang.github.io/mhctyper/"
 repo_name = "svm-zhang/mhctyper"
 repo_url = "https://github.com/svm-zhang/mhctyper"
+edit_uri = "edit/main/docs"
 copyright = """
 Copyright &copy; 2026 mhctyper author
 """
