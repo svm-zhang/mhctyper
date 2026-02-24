@@ -4,19 +4,15 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - "docs/**"
-      - ".github/**"
-      - mkdocs.yml
-      - "README.md"
+    paths:
+      - "src/**"
+      - "pyproject.toml"
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - "docs/**"
-      - ".github/**"
-      - mkdocs.yml
-      - "README.md"
+    paths:
+      - "src/**"
+      - "pyproject.toml"
   workflow_dispatch:
 
 jobs:
