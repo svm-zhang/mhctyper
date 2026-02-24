@@ -36,11 +36,11 @@ jobs:
           zensical build --clean
 
       - name: Upload
-        if: github.event_name == "push" && github.ref == "refs/heads/main"
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v4
         with:
           path: site
       - name: Deploy gh page
-        if: github.event_name == "push" && github.ref == "refs/heads/main"
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/deploy-pages@v4
         id: deployment
