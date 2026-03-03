@@ -9,7 +9,7 @@ edit_uri = "edit/main/docs"
 copyright = """
 Copyright &copy; 2026 mhctyper author
 """
-extra_css = ["stylesheets/extra.css"]
+extra_css = ["stylesheet/extra.css"]
 
 # Section for navigation configuration
 nav = ["index.md"]
