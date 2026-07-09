@@ -24,6 +24,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
   "Topic :: Software Development :: Libraries"
 ]
@@ -32,10 +33,10 @@ urls.Documentation = "https://svm-zhang.github.io/mhctyper/"
 urls.Issues = "https://github.com/svm-zhang/mhctyper/issues"
 license = "MIT"
 authors = [
-    { name = "Simo Zhang", email = "svm.zhang@gmail.com" }
+    { name = "Simo Zhang", email = "me@simovz.me" }
 ]
 maintainers = [
-    { name = "Simo Zhang", email = "svm.zhang@gmail.com" }
+    { name = "Simo Zhang", email = "me@simovz.me" }
 ]
 dynamic = ["version"]
 dependencies = [
@@ -55,15 +56,14 @@ metadata.allow-direct-references = true
 build.targets.sdist.include = [
   "/src",
   "/tests",
-  "/tox.ini"
+  "pyproject.toml"
 ]
 build.targets.wheel.packages = ["src/mhctyper"]
 build.hooks.vcs.version-file = "src/mhctyper/_version.py"
 version.source = "vcs"
 
-[tool.rye]
-managed = true
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.3.3",
     "pytest-cov>=5.0.0",
     "mypy>=1.15.0",
@@ -85,7 +85,6 @@ run.source = [
 run.parallel = true
 report.fail_under = 10
 report.show_missing = true
-
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
