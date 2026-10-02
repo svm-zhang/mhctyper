@@ -83,7 +83,7 @@ run.source = [
   "mhctyper"
 ]
 run.parallel = true
-report.fail_under = 10
+report.fail_under = 80
 report.show_missing = true
 
 [tool.pytest.ini_options]
